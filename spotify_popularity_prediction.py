@@ -98,3 +98,83 @@ axes[1].boxplot(df['popularity'], vert=True, patch_artist=True,
                 boxprops=dict(facecolor='#1DB954', alpha=0.7))
 axes[1].set_title('Popularity Boxplot', fontsize=14, fontweight='bold')
 axes[1].set_ylabel('Popularity')
+
+plt.tight_layout()
+plt.savefig('popularity_distribution.png', dpi=150, bbox_inches='tight')
+plt.show()
+print(f"\nPopularity stats: mean={df['popularity'].mean():.2f}, median={df['popularity'].median():.2f}, std={df['popularity'].std():.2f}")
+
+# %% [markdown]
+# ## 4. Preprocessing
+
+# %% [markdown]
+# ### 4.1 Handle Missing Values & Irrelevant Columns
+
+# %%
+print("=== Missing Values ===")
+missing = df.isnull().sum()
+print(missing[missing > 0])
+print(f"\nTotal missing values: {df.isnull().sum().sum()}")
+
+# Drop rows with missing values (if any)
+df_clean = df.dropna().copy()
+print(f"\nShape after dropping NaN: {df_clean.shape}")
+
+# %%
+# Drop irrelevant identifier columns
+# track_id, artists, album_name, track_name are identifiers/text, not useful as numeric features
+# We will NOT use popularity as an input feature (as per instructions)
+
+columns_to_drop = ['track_id', 'artists', 'album_name', 'track_name', 'Unnamed: 0']
+columns_to_drop = [c for c in columns_to_drop if c in df_clean.columns]
+
+print(f"Dropping irrelevant columns: {columns_to_drop}")
+df_clean = df_clean.drop(columns=columns_to_drop)
+
+print(f"Remaining columns: {df_clean.columns.tolist()}")
+print(f"Shape: {df_clean.shape}")
+
+# %% [markdown]
+# ### 4.2 Handle Categorical Variables
+
+# %%
+# Check for categorical columns
+print("Data types:")
+print(df_clean.dtypes)
+print()
+
+# 'explicit' is boolean - convert to int
+if df_clean['explicit'].dtype == bool or df_clean['explicit'].dtype == object:
+    df_clean['explicit'] = df_clean['explicit'].astype(int)
+    print("Converted 'explicit' to integer (0/1)")
+
+# 'track_genre' is categorical - encode it
+print(f"\nUnique genres: {df_clean['track_genre'].nunique()}")
+print(f"Sample genres: {df_clean['track_genre'].unique()[:10]}")
+
+# Label encode the genre column
+le_genre = LabelEncoder()
+df_clean['track_genre_encoded'] = le_genre.fit_transform(df_clean['track_genre'])
+df_clean = df_clean.drop(columns=['track_genre'])
+
+print(f"\nGenre encoded. New shape: {df_clean.shape}")
+
+# %%
+# Final check on all columns
+print("Final columns and types:")
+print(df_clean.dtypes)
+print(f"\nAny remaining non-numeric: {df_clean.select_dtypes(exclude=[np.number]).columns.tolist()}")
+
+# %% [markdown]
+# ### 4.3 Handle Duplicates
+
+# %%
+dupes = df_clean.duplicated().sum()
+print(f"Duplicate rows: {dupes}")
+if dupes > 0:
+    df_clean = df_clean.drop_duplicates()
+    print(f"After removing duplicates: {df_clean.shape}")
+
+# %% [markdown]
+# ### 4.4 Correlation Analysis & Feature Selection
+
