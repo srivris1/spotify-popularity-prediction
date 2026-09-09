@@ -48,3 +48,53 @@ import os
 # Option 1: If you uploaded the file to Colab
 # from google.colab import files
 # uploaded = files.upload()
+
+# Option 2: Direct download using kagglehub (Colab has this pre-installed usually)
+try:
+    import kagglehub
+    path = kagglehub.dataset_download("maharshipandya/-spotify-tracks-dataset")
+    csv_path = os.path.join(path, "dataset.csv")
+    df = pd.read_csv(csv_path)
+    print(f"Loaded via kagglehub from: {csv_path}")
+except Exception:
+    # Fallback: try loading from current directory
+    try:
+        df = pd.read_csv("dataset.csv")
+        print("Loaded from local file.")
+    except FileNotFoundError:
+        print("Please upload dataset.csv to the working directory or install kagglehub.")
+        raise
+
+print(f"\nDataset shape: {df.shape}")
+df.head()
+
+# %% [markdown]
+# ## 3. Initial Exploration
+
+# %%
+print("=== Dataset Info ===")
+print(f"Rows: {df.shape[0]}, Columns: {df.shape[1]}")
+print(f"\nColumn types:\n{df.dtypes}")
+print(f"\nMissing values:\n{df.isnull().sum()}")
+print(f"\nBasic statistics:")
+df.describe()
+
+# %%
+# Check the columns we have
+print("Columns:", df.columns.tolist())
+
+# %%
+# Distribution of the target variable - popularity
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+axes[0].hist(df['popularity'], bins=50, color='#1DB954', edgecolor='black', alpha=0.8)
+axes[0].set_title('Distribution of Popularity', fontsize=14, fontweight='bold')
+axes[0].set_xlabel('Popularity')
+axes[0].set_ylabel('Count')
+axes[0].axvline(df['popularity'].mean(), color='red', linestyle='--', label=f"Mean: {df['popularity'].mean():.1f}")
+axes[0].legend()
+
+axes[1].boxplot(df['popularity'], vert=True, patch_artist=True, 
+                boxprops=dict(facecolor='#1DB954', alpha=0.7))
+axes[1].set_title('Popularity Boxplot', fontsize=14, fontweight='bold')
+axes[1].set_ylabel('Popularity')
