@@ -418,3 +418,83 @@ plt.show()
 
 print("\nTop 5 Most Important Features:")
 for i, (feat, imp) in enumerate(feat_imp.sort_values(ascending=False).head(5).items()):
+    print(f"  {i+1}. {feat}: {imp:.4f}")
+
+# %% [markdown]
+# ### 7.2 Which Songs Are Hardest to Predict?
+
+# %%
+# Analyze prediction errors
+error_analysis = pd.DataFrame({
+    'actual': y_test.values,
+    'predicted': y_pred_best,
+    'abs_error': np.abs(y_test.values - y_pred_best),
+    'residual': y_test.values - y_pred_best
+})
+
+# Songs with largest errors
+print("=== Hardest to Predict (Largest Absolute Errors) ===")
+hardest = error_analysis.nlargest(10, 'abs_error')
+print(hardest.to_string(index=False))
+
+# %%
+# Error by popularity range
+error_analysis['pop_bin'] = pd.cut(error_analysis['actual'], 
+                                    bins=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+                                    labels=['0-10', '10-20', '20-30', '30-40', '40-50', 
+                                           '50-60', '60-70', '70-80', '80-90', '90-100'])
+
+error_by_bin = error_analysis.groupby('pop_bin')['abs_error'].agg(['mean', 'std', 'count'])
+print("\n=== Mean Absolute Error by Popularity Range ===")
+print(error_by_bin.to_string())
+
+fig, ax = plt.subplots(figsize=(12, 5))
+error_by_bin['mean'].plot(kind='bar', ax=ax, color='#e74c3c', edgecolor='black', alpha=0.8, yerr=error_by_bin['std'])
+ax.set_title('Mean Absolute Error by Popularity Range', fontsize=14, fontweight='bold')
+ax.set_xlabel('Popularity Range')
+ax.set_ylabel('Mean Absolute Error')
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+plt.tight_layout()
+plt.savefig('error_by_popularity.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+# %% [markdown]
+# ### 7.3 How Close Are Predictions?
+
+# %%
+# Percentage of predictions within certain thresholds
+thresholds = [5, 10, 15, 20, 25]
+print("=== Prediction Accuracy within Thresholds ===")
+for t in thresholds:
+    pct = (error_analysis['abs_error'] <= t).mean() * 100
+    print(f"  Within ±{t} popularity points: {pct:.1f}%")
+
+# %%
+# Actual vs Predicted for different popularity ranges
+fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+ranges = [(0, 25, 'Low (0-25)'), (25, 50, 'Medium-Low (25-50)'), 
+          (50, 75, 'Medium-High (50-75)'), (75, 100, 'High (75-100)')]
+
+for ax, (lo, hi, label) in zip(axes.flatten(), ranges):
+    mask = (error_analysis['actual'] >= lo) & (error_analysis['actual'] <= hi)
+    subset = error_analysis[mask]
+    ax.scatter(subset['actual'], subset['predicted'], alpha=0.2, s=8, color='#1DB954')
+    ax.plot([lo, hi], [lo, hi], 'r--', linewidth=1.5)
+    ax.set_title(f'{label}\nMAE: {subset["abs_error"].mean():.2f}', fontsize=11, fontweight='bold')
+    ax.set_xlabel('Actual')
+    ax.set_ylabel('Predicted')
+    ax.set_xlim(lo-5, hi+5)
+
+plt.suptitle('Predictions by Popularity Range', fontsize=14, fontweight='bold')
+plt.tight_layout()
+plt.savefig('predictions_by_range.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+# %% [markdown]
+# ## 8. Cross-Validation (Best Model)
+
+# %%
+# 5-fold cross-validation on the best model
+if best_model_name == 'Ridge Regression':
+    cv_scores = cross_val_score(best_model_results['model'], X_train_scaled, y_train, 
