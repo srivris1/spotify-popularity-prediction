@@ -348,3 +348,73 @@ for i, metric in enumerate(metrics):
                      f'{val:.3f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
 
 plt.suptitle('Model Performance Comparison', fontsize=16, fontweight='bold', y=1.02)
+plt.tight_layout()
+plt.savefig('model_comparison.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+# %%
+# Identify best model
+best_model_name = comparison_df['R² Score'].idxmax()
+best_model_results = results[best_model_name]
+print(f"\n🏆 Best Model: {best_model_name}")
+print(f"   R² Score: {best_model_results['R2']:.4f}")
+print(f"   RMSE: {best_model_results['RMSE']:.4f}")
+print(f"   MAE: {best_model_results['MAE']:.4f}")
+
+# %% [markdown]
+# ## 7. Detailed Analysis of Best Model
+
+# %%
+# Actual vs Predicted scatter plot for best model
+y_pred_best = best_model_results['predictions']
+
+fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+# Scatter plot
+axes[0].scatter(y_test, y_pred_best, alpha=0.15, s=10, color='#1DB954', edgecolors='none')
+axes[0].plot([0, 100], [0, 100], 'r--', linewidth=2, label='Perfect Prediction')
+axes[0].set_xlabel('Actual Popularity', fontsize=12)
+axes[0].set_ylabel('Predicted Popularity', fontsize=12)
+axes[0].set_title(f'{best_model_name}: Actual vs Predicted', fontsize=14, fontweight='bold')
+axes[0].legend(fontsize=11)
+axes[0].set_xlim(-5, 105)
+axes[0].set_ylim(-5, 105)
+
+# Residual distribution
+residuals = y_test - y_pred_best
+axes[1].hist(residuals, bins=60, color='#3498db', edgecolor='black', alpha=0.8, density=True)
+axes[1].axvline(x=0, color='red', linestyle='--', linewidth=2)
+axes[1].set_xlabel('Residual (Actual - Predicted)', fontsize=12)
+axes[1].set_ylabel('Density', fontsize=12)
+axes[1].set_title('Residual Distribution', fontsize=14, fontweight='bold')
+axes[1].text(0.05, 0.95, f'Mean: {residuals.mean():.2f}\nStd: {residuals.std():.2f}', 
+             transform=axes[1].transAxes, fontsize=11, verticalalignment='top',
+             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+
+plt.tight_layout()
+plt.savefig('actual_vs_predicted.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+# %% [markdown]
+# ### 7.1 Feature Importance
+
+# %%
+# Feature importance from tree-based models
+if best_model_name in ['Random Forest', 'Gradient Boosting', 'XGBoost']:
+    importances = best_model_results['model'].feature_importances_
+else:
+    # Use Random Forest for feature importance anyway
+    importances = results['Random Forest']['model'].feature_importances_
+
+feat_imp = pd.Series(importances, index=X.columns).sort_values(ascending=True)
+
+fig, ax = plt.subplots(figsize=(10, 8))
+feat_imp.plot(kind='barh', ax=ax, color='#1DB954', edgecolor='black', alpha=0.85)
+ax.set_title('Feature Importance (Best Model)', fontsize=14, fontweight='bold')
+ax.set_xlabel('Importance Score')
+plt.tight_layout()
+plt.savefig('feature_importance.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+print("\nTop 5 Most Important Features:")
+for i, (feat, imp) in enumerate(feat_imp.sort_values(ascending=False).head(5).items()):
