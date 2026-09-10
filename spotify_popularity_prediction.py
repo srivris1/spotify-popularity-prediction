@@ -248,3 +248,103 @@ print("Feature scaling applied (StandardScaler - zero mean, unit variance)")
 models = {
     'Ridge Regression': Ridge(alpha=1.0),
     'Random Forest': RandomForestRegressor(
+        n_estimators=200,
+        max_depth=15,
+        min_samples_split=5,
+        min_samples_leaf=2,
+        random_state=42,
+        n_jobs=-1
+    ),
+    'Gradient Boosting': GradientBoostingRegressor(
+        n_estimators=200,
+        max_depth=5,
+        learning_rate=0.1,
+        min_samples_split=5,
+        random_state=42
+    ),
+    'XGBoost': XGBRegressor(
+        n_estimators=300,
+        max_depth=6,
+        learning_rate=0.1,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        random_state=42,
+        verbosity=0
+    )
+}
+
+# %%
+# Train all models and store results
+results = {}
+
+for name, model in models.items():
+    print(f"\n{'='*50}")
+    print(f"Training: {name}")
+    print('='*50)
+    
+    # Use scaled data for Ridge, unscaled for tree-based models
+    if name == 'Ridge Regression':
+        model.fit(X_train_scaled, y_train)
+        y_pred = model.predict(X_test_scaled)
+    else:
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+    
+    # Calculate metrics
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    
+    results[name] = {
+        'model': model,
+        'predictions': y_pred,
+        'MSE': mse,
+        'RMSE': rmse,
+        'MAE': mae,
+        'R2': r2
+    }
+    
+    print(f"  MSE:  {mse:.4f}")
+    print(f"  RMSE: {rmse:.4f}")
+    print(f"  MAE:  {mae:.4f}")
+    print(f"  R²:   {r2:.4f}")
+
+# %% [markdown]
+# ## 6. Evaluation & Comparison
+
+# %%
+# Summary comparison table
+comparison_df = pd.DataFrame({
+    name: {
+        'MSE': res['MSE'],
+        'RMSE': res['RMSE'],
+        'MAE': res['MAE'],
+        'R² Score': res['R2']
+    } for name, res in results.items()
+}).T
+
+comparison_df = comparison_df.sort_values('R² Score', ascending=False)
+print("\n=== MODEL COMPARISON ===")
+print(comparison_df.to_string())
+
+# %%
+# Visual comparison of models
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+metrics = ['RMSE', 'MAE', 'R² Score']
+colors_list = ['#1DB954', '#3498db', '#e74c3c', '#f39c12']
+
+for i, metric in enumerate(metrics):
+    bars = axes[i].bar(comparison_df.index, comparison_df[metric], 
+                       color=colors_list[:len(comparison_df)], edgecolor='black', alpha=0.85)
+    axes[i].set_title(metric, fontsize=14, fontweight='bold')
+    axes[i].set_xticklabels(comparison_df.index, rotation=30, ha='right', fontsize=9)
+    axes[i].set_ylabel(metric)
+    
+    # Add value labels on bars
+    for bar, val in zip(bars, comparison_df[metric]):
+        axes[i].text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.01*bar.get_height(),
+                     f'{val:.3f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+plt.suptitle('Model Performance Comparison', fontsize=16, fontweight='bold', y=1.02)
