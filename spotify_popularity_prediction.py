@@ -178,3 +178,73 @@ if dupes > 0:
 # %% [markdown]
 # ### 4.4 Correlation Analysis & Feature Selection
 
+# %%
+# Correlation heatmap
+plt.figure(figsize=(14, 10))
+corr_matrix = df_clean.corr()
+mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+sns.heatmap(corr_matrix, mask=mask, annot=True, fmt='.2f', cmap='RdYlGn', 
+            center=0, square=True, linewidths=0.5, cbar_kws={"shrink": 0.8})
+plt.title('Feature Correlation Heatmap', fontsize=16, fontweight='bold', pad=20)
+plt.tight_layout()
+plt.savefig('correlation_heatmap.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+# %%
+# Correlation with popularity specifically
+pop_corr = corr_matrix['popularity'].drop('popularity').sort_values(ascending=False)
+print("Correlation with Popularity:")
+print(pop_corr)
+
+# Visualize it
+fig, ax = plt.subplots(figsize=(10, 6))
+colors = ['#1DB954' if v > 0 else '#e74c3c' for v in pop_corr.values]
+pop_corr.plot(kind='barh', ax=ax, color=colors, edgecolor='black', alpha=0.8)
+ax.set_title('Feature Correlation with Popularity', fontsize=14, fontweight='bold')
+ax.set_xlabel('Pearson Correlation Coefficient')
+ax.axvline(x=0, color='black', linewidth=0.8)
+plt.tight_layout()
+plt.savefig('feature_correlation_popularity.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+# %% [markdown]
+# ### 4.5 Feature Scaling
+
+# %%
+# Separate features and target
+X = df_clean.drop(columns=['popularity'])
+y = df_clean['popularity']
+
+print(f"Features shape: {X.shape}")
+print(f"Target shape: {y.shape}")
+print(f"Feature columns: {X.columns.tolist()}")
+
+# %%
+# Train-test split (80/20)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+print(f"Training set: {X_train.shape}")
+print(f"Test set: {X_test.shape}")
+
+# %%
+# Scale the features using StandardScaler
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+print("Feature scaling applied (StandardScaler - zero mean, unit variance)")
+
+# %% [markdown]
+# ## 5. Model Training
+
+# %% [markdown]
+# I'm going to compare 4 different regression models:
+# 1. **Ridge Regression** (linear baseline)
+# 2. **Random Forest Regressor** (ensemble, bagging)
+# 3. **Gradient Boosting Regressor** (ensemble, boosting)
+# 4. **XGBoost Regressor** (optimized boosting)
+
+# %%
+# Define models
+models = {
+    'Ridge Regression': Ridge(alpha=1.0),
+    'Random Forest': RandomForestRegressor(
