@@ -498,3 +498,62 @@ plt.show()
 # 5-fold cross-validation on the best model
 if best_model_name == 'Ridge Regression':
     cv_scores = cross_val_score(best_model_results['model'], X_train_scaled, y_train, 
+                                 cv=5, scoring='r2', n_jobs=-1)
+else:
+    cv_scores = cross_val_score(best_model_results['model'], X_train, y_train, 
+                                 cv=5, scoring='r2', n_jobs=-1)
+
+print(f"=== 5-Fold Cross-Validation ({best_model_name}) ===")
+print(f"R² scores: {cv_scores}")
+print(f"Mean R²: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
+
+# %% [markdown]
+# ## 9. Summary & Conclusions
+
+# %%
+print("=" * 60)
+print("         SPOTIFY POPULARITY PREDICTION - SUMMARY")
+print("=" * 60)
+print()
+print(f"Dataset: {df.shape[0]} tracks, {df.shape[1]} original features")
+print(f"After preprocessing: {df_clean.shape[0]} rows, {X.shape[1]} features")
+print()
+print("Models Compared:")
+for name in comparison_df.index:
+    r2 = results[name]['R2']
+    rmse = results[name]['RMSE']
+    print(f"  - {name}: R²={r2:.4f}, RMSE={rmse:.4f}")
+print()
+print(f"🏆 Best Model: {best_model_name}")
+print(f"   R² Score: {best_model_results['R2']:.4f}")
+print(f"   RMSE: {best_model_results['RMSE']:.4f}")
+print(f"   MAE: {best_model_results['MAE']:.4f}")
+print()
+print("Top Features:")
+for i, (feat, imp) in enumerate(feat_imp.sort_values(ascending=False).head(5).items()):
+    print(f"  {i+1}. {feat}")
+print()
+print("Key Insights:")
+print("  - Songs with very low popularity (0-10) are the hardest to predict")
+print("  - Genre encoding plays a major role in prediction")
+print("  - Audio features like energy, loudness, and danceability are significant")
+print("  - Tree-based models significantly outperform linear regression")
+print()
+print("Future Improvements:")
+print("  - Try neural network based approaches")
+print("  - Use artist popularity as a feature (external data)")
+print("  - Experiment with more hyperparameter tuning (GridSearch/Bayesian)")
+print("  - Apply target transformation (log) for skewed popularity distribution")
+print("=" * 60)
+
+# %%
+# Save all plots summary
+print("\nSaved plots:")
+print("  1. popularity_distribution.png")
+print("  2. correlation_heatmap.png")
+print("  3. feature_correlation_popularity.png")
+print("  4. model_comparison.png")
+print("  5. actual_vs_predicted.png")
+print("  6. feature_importance.png")
+print("  7. error_by_popularity.png")
+print("  8. predictions_by_range.png")
