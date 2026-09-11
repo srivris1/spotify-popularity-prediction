@@ -1,0 +1,159 @@
+CodeNex AIML Task 2 — Spotify Song Popularity Prediction
+Task Report
+Rishit Srivastava
+
+
+--- INTRODUCTION ---
+
+So the task was to predict how popular a Spotify song is going to be, using its audio features. Popularity on Spotify goes from 0 to 100 and its calculated by their algorithm based on how many plays a track gets and how recent they are.
+
+I used the Spotify Tracks Dataset from Kaggle which has around 114k songs across 114 different genres. Each track comes with bunch of audio features like how danceable it is, energy level, tempo, loudness etc. The idea was pretty straightforward - can we figure out if a song will be popular just from these numbers?
+
+Honestly I went into this thinking it would be simple — throw some data at a model and it predicts popularity. Turned out to be a lot more nuanced than that. Popularity depends on so many external things (marketing, artist fame, timing of release) that audio features alone can only tell you part of the story. The mean popularity was around 33.24 with a std of 22.31, so there's a huge spread.
+
+
+--- DATASET & PREPROCESSING ---
+
+The dataset had 114,000 rows and 21 columns. Heres what I did during preprocessing:
+
+1. Missing values: Checked for nulls — found 3 total (1 each in artists, album_name, track_name). Since those columns were going to be dropped anyway I just did a dropna to clean things up. Ended up with 113,999 rows.
+
+2. Dropping irrelevant columns: Removed track_id, artists, album_name, track_name, and Unnamed: 0 (index column from the CSV). These are text identifiers and dont make sense as numeric inputs for regression. The task also specifically said not to use popularity as an input feature which — yeah obviously, thats the target variable.
+
+3. Categorical variables: The main one was track_genre which had 114 unique genres. I used sklearn LabelEncoder to convert it to numeric. I considered one hot encoding but with 114 genres that would blow up the feature space to 114 extra columns which seemed excessive, especially for tree based models that handle label encoding just fine.
+
+   The explicit column was boolean so I just cast it to 0/1.
+
+4. Duplicates: Found 7,093 duplicate rows (same song appearing multiple times probably across different genre categories). Removed those — final cleaned dataset came down to 106,906 rows.
+
+5. Feature scaling: Used StandardScaler to normalize features. This is mainly needed for the Ridge regression model — tree based models dont really care about feature scale but I applied it to Ridge anyway.
+
+The final cleaned dataset had 106,906 rows and 15 input features.
+
+
+--- MODEL & PARAMETERS ---
+
+I trained 4 different models because the task mentioned comparing multiple models is welcome:
+
+1. Ridge Regression (baseline)
+   - alpha = 1.0
+   - This is basically linear regression with L2 regularization. I used this as a sanity check / baseline. If a linear model does well, maybe the relationship is simple. Spoiler: it didnt do well at all.
+
+2. Random Forest Regressor
+   - n_estimators = 200
+   - max_depth = 15
+   - min_samples_split = 5
+   - min_samples_leaf = 2
+   - Built an ensemble of 200 decision trees. Each one sees a random subset of features and data. The final prediction is the average of all trees.
+
+3. Gradient Boosting Regressor
+   - n_estimators = 200
+   - max_depth = 5
+   - learning_rate = 0.1
+   - Unlike random forest where trees are independent, gradient boosting builds trees sequentially where each new tree tries to fix the errors of the previous ones.
+
+4. XGBoost Regressor
+   - n_estimators = 300
+   - max_depth = 6
+   - learning_rate = 0.1
+   - subsample = 0.8
+   - colsample_bytree = 0.8
+   - XGBoost is basically an optimized version of gradient boosting with regularization built in. It also handles sparse data better.
+
+I chose these parameters through a mix of common defaults and some manual tweaking. Didnt do full grid search because of time constraints but played around with a few values to see what works.
+
+I used 80-20 train-test split (85,524 train / 21,382 test) with random_state=42 for reproducibility.
+
+
+--- RESULTS ---
+
+Here are the results from all four models on the test set:
+
+Ridge Regression:
+  R² Score: 0.0426
+  RMSE: 20.97
+  MAE: 17.23
+
+Random Forest:
+  R² Score: 0.3283
+  RMSE: 17.57
+  MAE: 13.13
+
+Gradient Boosting:
+  R² Score: 0.3089
+  RMSE: 17.82
+  MAE: 13.27
+
+XGBoost:
+  R² Score: 0.3721
+  RMSE: 16.98
+  MAE: 12.47
+
+XGBoost performed the best across all metrics. The R² of 0.37 means the model explains about 37% of the variance in popularity. Thats not amazing but its actually a reasonable result for this particular problem — predicting popularity from audio features alone is inherently difficult because popularity depends so much on things like marketing, playlist placement, social media trends, and artist fame which we simply dont have in this dataset.
+
+Ridge regression basically failed with R² of 0.04. This tells us the relationship between audio features and popularity is highly non-linear which makes sense.
+
+Cross validation (5-fold) on XGBoost gave mean R² of 0.3676 ± 0.0085 which shows the results are stable and consistent across different splits — not just a lucky partition.
+
+
+--- ANALYSIS ---
+
+Which features matter most?
+
+The feature importance from XGBoost showed:
+1. track_genre_encoded (0.2456) — by far the biggest predictor. This makes complete sense because certain genres (pop, hip-hop) tend to have much higher popularity than niche genres like black-metal or ambient.
+2. instrumentalness (0.0881) — songs with less vocal content tend to be less popular. Pure instrumental tracks usually dont chart.
+3. explicit (0.0802) — surprisingly important. Explicit songs apparently have different popularity patterns.
+4. acousticness (0.0734) — acoustic tracks tend to be less popular in general streaming context.
+5. valence (0.0550) — the "happiness" factor of a song has some influence.
+
+Features like key, mode, and time_signature were basically useless for prediction which makes sense — whether a song is in C major vs D minor doesnt influence whether someone clicks play.
+
+How close are the predictions?
+
+I checked what percentage of predictions fall within certain thresholds:
+- Within ±5 points: 32.0%
+- Within ±10 points: 54.9%
+- Within ±15 points: 69.4%
+- Within ±20 points: 78.8%
+- Within ±25 points: 85.0%
+
+So roughly 55% of predictions are within 10 points of the actual value and almost 70% are within 15 points. For a 0-100 scale, thats not bad.
+
+Which songs are hardest to predict?
+
+Looking at the mean absolute error by popularity range:
+- Songs with popularity 0-10: MAE of 18.53 — This is the bucket with some of the highest errors. Many songs have popularity = 0 which could mean they just havent been discovered yet, not that theyre bad. The model cant distinguish "bad song" from "good song nobody has heard yet."
+- Songs with popularity 30-40: MAE of only 5.53 — The sweet spot. These "average" songs are predicted most accurately because theres lots of training data in this range.
+- Songs with popularity 80-100: MAE of 41-53 — Extremely hard. Very few tracks reach viral-level popularity and it depends almost entirely on external factors the model cant see.
+
+The worst individual prediction was off by 81.5 points — a song with actual popularity 98 that the model predicted at 16.5. That kind of viral hit is basically impossible to predict from audio features.
+
+What would I try next?
+
+1. Target transformation — popularity is pretty skewed. Applying log or sqrt transform might help the model learn better for extreme values.
+2. Artist features — if I could bring in artist follower count or monthly listeners as a feature it would probably help a lot. Popularity is so tied to artist fame.
+3. Proper hyperparameter search — doing RandomizedSearchCV or Bayesian optimization with optuna instead of manual tuning.
+4. Neural network — MLP regressor might capture more complex non-linear patterns.
+5. Stacking — combining predictions from multiple models into a meta-learner.
+
+
+--- CONCLUSION ---
+
+This project was a solid exercise in the full ML workflow. The main takeaway for me was that predicting popularity from audio features alone has a hard ceiling because popularity is influenced by so many non-audio factors. That said, the XGBoost model with R² of 0.37 does a reasonable job and the feature analysis gave interesting insights — genre dominates everything, instrumentalness matters more than you'd think, and audio features play a secondary but measurable role.
+
+The project covered: data loading and exploration, handling missing values and categoricals, feature engineering and scaling, training 4 different models, evaluation with multiple metrics, feature importance analysis, error analysis by popularity range, and cross validation. I think the most interesting part was the error analysis — figuring out WHY certain songs are hard to predict was more insightful than just chasing a higher R² score. The model is decent at predicting "normal" songs in the 20-50 range but struggles with outliers on both ends, which is kind of expected.
+
+
+--- SCREENSHOTS ---
+(Attached separately — includes correlation heatmap, model comparison chart, actual vs predicted scatter plot, feature importance, error by popularity range, residual distribution, and predictions by range)
+
+
+--- TECH STACK ---
+Python, pandas, numpy, scikit-learn, XGBoost, matplotlib, seaborn
+Google Colab / Jupyter Notebook
+
+
+--- LINKS ---
+Google Colab Notebook: [link to be inserted after uploading to Colab]
+GitHub Repository: https://github.com/srivris1

@@ -1,0 +1,51 @@
+# ======================================================
+# GOOGLE FORM ANSWERS — CodeNex AIML Task Submission
+# ======================================================
+# Copy-paste these into the Google Form fields.
+# ======================================================
+
+
+# ------ Task Completed ------
+# SELECT: Task 2 — Spotify Song Popularity Prediction
+
+
+# ------ Project / Notebook Link ------
+# (Paste your Google Colab link here after uploading the notebook)
+# Example: https://colab.research.google.com/drive/YOUR_NOTEBOOK_ID
+
+
+# ------ Tech Stack Used ------
+Python, pandas, numpy, scikit-learn, XGBoost, matplotlib, seaborn, Google Colab
+
+
+# ------ Live Deployment Link (Optional) ------
+# Leave blank — not applicable for ML projects
+
+
+# ------ GitHub Repository ------
+https://github.com/srivris1
+
+
+# ------ Upload Task Report / Document ------
+# Upload the Task_Report PDF (convert the .txt to PDF or paste into Google Docs first)
+
+
+# ------ Briefly explain your approach and what you learned from the task ------
+
+I started by exploring the dataset — 114k Spotify tracks with audio features. Most songs had low popularity (mean was around 33 out of 100) which made sense since majority of songs on Spotify arent mainstream hits. After cleaning the data — dropping identifiers, encoding 114 genres with LabelEncoder, removing 7k duplicates — I trained 4 models: Ridge Regression as a baseline, Random Forest, Gradient Boosting, and XGBoost. XGBoost came out on top with R² of 0.37 and RMSE of 16.98.
+
+What I learned is that accuracy isnt everything in ML. Even with R² of 0.37, the analysis of why it fails was more valuable than the number itself. Genre was by far the most important feature which makes intuitive sense. Also I realized popularity depends heavily on external factors (artist fame, marketing, playlist placement) that audio features just cant capture — so theres a natural ceiling on how well any model can do with just this data.
+
+
+# ------ What was the most challenging part of the task, and how did you handle it? ------
+
+The toughest part was dealing with the skewed target variable and understanding why my models werent hitting high R² scores. Initially I thought something was wrong with my preprocessing but after digging into it I realized the problem is fundamental — predicting popularity from audio features alone is inherently limited.
+
+The error analysis helped me understand this. Songs in the 30-40 popularity range had MAE of just 5.5 (really accurate) but songs above 80 had MAE over 40. A viral hit with popularity 98 was predicted as 16 — thats an 81 point miss. But it makes sense, nothing in the audio tells you that a song went viral on TikTok.
+
+I also spent time figuring out genre encoding. With 114 genres, one-hot encoding would create too many sparse features. Label encoding worked fine since tree models dont assume any ordering.
+
+
+# ------ Anything you want to know about CodeNex? ------
+
+Yeah I was curious — does CodeNex do any team-based ML competitions like Kaggle or hackathons? Also wanted to know if theres a reading group or paper discussion sessions for staying updated on AI research. Would be cool to know what kind of projects members typically work on beyond recruitment tasks.
