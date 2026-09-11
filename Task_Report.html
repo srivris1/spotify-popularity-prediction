@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeNex AIML Task 2 — Spotify Song Popularity Prediction</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: #1a1a2e;
+            background: #ffffff;
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 40px 50px;
+            font-size: 14px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #1DB954;
+            margin-bottom: 35px;
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 6px;
+        }
+        .header .subtitle {
+            font-size: 16px;
+            color: #555;
+            font-weight: 500;
+        }
+        .header .author {
+            font-size: 14px;
+            color: #777;
+            margin-top: 8px;
+        }
+
+        /* Sections */
+        h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1DB954;
+            margin-top: 35px;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #e8f5e9;
+        }
+        h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+
+        p { margin-bottom: 12px; }
+
+        /* Lists */
+        ol, ul {
+            margin-left: 24px;
+            margin-bottom: 14px;
+        }
+        li { margin-bottom: 6px; }
+
+        /* Code */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: #f0f4f8;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12.5px;
+            color: #d63384;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 13.5px;
+        }
+        th {
+            background: #1DB954;
+            color: white;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        tr:nth-child(even) { background: #f8faf8; }
+        tr.best { background: #e8f5e9; font-weight: 600; }
+
+        /* Images */
+        .plot-container {
+            margin: 18px 0;
+            text-align: center;
+        }
+        .plot-container img {
+            max-width: 100%;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .plot-caption {
+            font-size: 12px;
+            color: #888;
+            margin-top: 6px;
+            font-style: italic;
+        }
+
+        /* Highlight boxes */
+        .highlight-box {
+            background: #f0faf3;
+            border-left: 4px solid #1DB954;
+            padding: 14px 18px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .highlight-box strong { color: #1DB954; }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+        }
+
+        @media print {
+            body { padding: 20px 30px; }
+            .plot-container img { max-width: 95%; }
+            h2 { page-break-after: avoid; }
+            .plot-container { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🎵 Spotify Song Popularity Prediction</h1>
+        <div class="subtitle">CodeNex AIML Club — Task 2 Report</div>
+        <div class="author">Rishit Srivastava &nbsp;|&nbsp; GitHub: @srivris1</div>
+    </div>
+
+    <!-- INTRODUCTION -->
+    <h2>1. Introduction</h2>
+    <p>So the task was to predict how popular a Spotify song is going to be, using its audio features. Popularity on Spotify goes from 0 to 100 and its calculated by their algorithm based on how many plays a track gets and how recent those plays are.</p>
+    <p>I used the Spotify Tracks Dataset from Kaggle which has around 114k songs across 114 different genres. Each track comes with a bunch of audio features like how danceable it is, energy level, tempo, loudness etc. The idea was straightforward — can we figure out if a song will be popular just from these numbers?</p>
+    <p>Honestly I went into this thinking it would be simple — throw some data at a model and it predicts popularity. Turned out to be a lot more nuanced than that. Popularity depends on so many external things (marketing, artist fame, timing of release) that audio features alone can only tell you part of the story. The mean popularity was around 33.24 with a std of 22.31, so there's a huge spread.</p>
+
+    <div class="plot-container">
+        <img src="popularity_distribution.png" alt="Popularity Distribution">
+        <div class="plot-caption">Figure 1: Distribution of song popularity — heavily skewed toward lower values</div>
+    </div>
+
+    <!-- DATASET & PREPROCESSING -->
+    <h2>2. Dataset & Preprocessing Choices</h2>
+    <p>The dataset had <strong>114,000 rows</strong> and <strong>21 columns</strong>. Here's what I did during preprocessing:</p>
+
+    <ol>
+        <li><strong>Missing values:</strong> Checked for nulls — found 3 total (1 each in artists, album_name, track_name). Since those columns were going to be dropped anyway I just did a <code>dropna()</code> to clean things up. Ended up with 113,999 rows.</li>
+        <li><strong>Dropping irrelevant columns:</strong> Removed <code>track_id</code>, <code>artists</code>, <code>album_name</code>, <code>track_name</code>, and <code>Unnamed: 0</code>. These are text identifiers and don't make sense as numeric inputs for regression.</li>
+        <li><strong>Categorical variables:</strong> The main one was <code>track_genre</code> with 114 unique genres. I used sklearn's <code>LabelEncoder</code> to convert it to numeric. I considered one-hot encoding but with 114 genres that would blow up the feature space — and tree-based models handle label encoding just fine. The <code>explicit</code> column was boolean so I cast it to 0/1.</li>
+        <li><strong>Duplicates:</strong> Found <strong>7,093 duplicate rows</strong> (same song appearing across different genre categories). Removed those — final dataset came down to <strong>106,906 rows</strong>.</li>
+        <li><strong>Feature scaling:</strong> Used <code>StandardScaler</code> for Ridge regression. Tree-based models don't need scaling.</li>
+    </ol>
+
+    <div class="plot-container">
+        <img src="correlation_heatmap.png" alt="Correlation Heatmap">
+        <div class="plot-caption">Figure 2: Feature correlation heatmap — most features have weak correlation with popularity</div>
+    </div>
+
+    <div class="plot-container">
+        <img src="feature_correlation_popularity.png" alt="Feature Correlation with Popularity">
+        <div class="plot-caption">Figure 3: Individual feature correlations with the target variable</div>
+    </div>
+
+    <!-- MODEL & PARAMETERS -->
+    <h2>3. Model & Parameters</h2>
+    <p>I trained 4 different models to compare approaches:</p>
+
+    <h3>3.1 Ridge Regression (Baseline)</h3>
+    <p>Linear regression with L2 regularization (<code>alpha=1.0</code>). Used as a sanity check — if a linear model does well, maybe the relationship is simple.</p>
+
+    <h3>3.2 Random Forest Regressor</h3>
+    <p>Ensemble of 200 decision trees. Parameters: <code>max_depth=15</code>, <code>min_samples_split=5</code>, <code>min_samples_leaf=2</code>. Each tree sees a random subset of features and data.</p>
+
+    <h3>3.3 Gradient Boosting Regressor</h3>
+    <p>Sequential ensemble (<code>n_estimators=200</code>, <code>max_depth=5</code>, <code>learning_rate=0.1</code>). Each new tree tries to fix the errors of previous ones.</p>
+
+    <h3>3.4 XGBoost Regressor</h3>
+    <p>Optimized gradient boosting with built-in regularization. Parameters: <code>n_estimators=300</code>, <code>max_depth=6</code>, <code>learning_rate=0.1</code>, <code>subsample=0.8</code>, <code>colsample_bytree=0.8</code>.</p>
+
+    <div class="highlight-box">
+        Used <strong>80-20 train-test split</strong> (85,524 train / 21,382 test) with <code>random_state=42</code> for reproducibility. Parameters chosen through common defaults + manual tweaking.
+    </div>
+
+    <!-- RESULTS -->
+    <h2>4. Results</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>MSE</th>
+                <th>RMSE</th>
+                <th>MAE</th>
+                <th>R² Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Ridge Regression</td>
+                <td>439.82</td>
+                <td>20.97</td>
+                <td>17.23</td>
+                <td>0.0426</td>
+            </tr>
+            <tr>
+                <td>Random Forest</td>
+                <td>308.56</td>
+                <td>17.57</td>
+                <td>13.13</td>
+                <td>0.3283</td>
+            </tr>
+            <tr>
+                <td>Gradient Boosting</td>
+                <td>317.51</td>
+                <td>17.82</td>
+                <td>13.27</td>
+                <td>0.3089</td>
+            </tr>
+            <tr class="best">
+                <td>🏆 XGBoost</td>
+                <td>288.47</td>
+                <td>16.98</td>
+                <td>12.47</td>
+                <td>0.3721</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>XGBoost performed best across all metrics. R² of 0.37 means the model explains about 37% of the variance in popularity — reasonable for this problem since popularity heavily depends on non-audio factors. Ridge regression basically failed (R² = 0.04), confirming the relationship is highly non-linear.</p>
+
+    <p><strong>5-Fold Cross Validation (XGBoost):</strong> Mean R² = 0.3676 ± 0.0085 — results are stable and consistent.</p>
+
+    <div class="plot-container">
+        <img src="model_comparison.png" alt="Model Comparison">
+        <div class="plot-caption">Figure 4: Model performance comparison across RMSE, MAE, and R² Score</div>
+    </div>
+
+    <!-- ANALYSIS -->
+    <h2>5. Analysis</h2>
+
+    <h3>5.1 Feature Importance</h3>
+    <p>The feature importance from XGBoost showed:</p>
+    <ol>
+        <li><strong>track_genre_encoded (0.2456)</strong> — by far the biggest predictor. Certain genres (pop, hip-hop) naturally trend higher than niche genres.</li>
+        <li><strong>instrumentalness (0.0881)</strong> — songs without vocals tend to be less popular.</li>
+        <li><strong>explicit (0.0802)</strong> — surprisingly important; explicit songs have different popularity patterns.</li>
+        <li><strong>acousticness (0.0734)</strong> — acoustic tracks tend to be less popular in the streaming context.</li>
+        <li><strong>valence (0.0550)</strong> — the "happiness" factor has some influence.</li>
+    </ol>
+    <p>Features like <code>key</code>, <code>mode</code>, and <code>time_signature</code> were basically useless — whether a song is in C major vs D minor doesn't influence clicks.</p>
+
+    <div class="plot-container">
+        <img src="feature_importance.png" alt="Feature Importance">
+        <div class="plot-caption">Figure 5: XGBoost feature importance — genre dominates all other features</div>
+    </div>
+
+    <h3>5.2 How Close Are Predictions?</h3>
+    <table>
+        <thead>
+            <tr><th>Threshold</th><th>% of Predictions Within Range</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Within ±5 points</td><td>32.0%</td></tr>
+            <tr><td>Within ±10 points</td><td>54.9%</td></tr>
+            <tr><td>Within ±15 points</td><td>69.4%</td></tr>
+            <tr><td>Within ±20 points</td><td>78.8%</td></tr>
+            <tr><td>Within ±25 points</td><td>85.0%</td></tr>
+        </tbody>
+    </table>
+
+    <div class="plot-container">
+        <img src="actual_vs_predicted.png" alt="Actual vs Predicted">
+        <div class="plot-caption">Figure 6: Actual vs Predicted scatter plot and residual distribution</div>
+    </div>
+
+    <h3>5.3 Which Songs Are Hardest to Predict?</h3>
+    <table>
+        <thead>
+            <tr><th>Popularity Range</th><th>Mean Abs. Error</th><th>Count</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>0-10</td><td>18.53</td><td>1,333</td></tr>
+            <tr><td>10-20</td><td>7.97</td><td>2,132</td></tr>
+            <tr><td>20-30</td><td>7.38</td><td>3,486</td></tr>
+            <tr class="best"><td>30-40</td><td>5.53</td><td>3,058</td></tr>
+            <tr><td>40-50</td><td>6.44</td><td>3,784</td></tr>
+            <tr><td>50-60</td><td>12.31</td><td>2,857</td></tr>
+            <tr><td>60-70</td><td>19.95</td><td>1,777</td></tr>
+            <tr><td>70-80</td><td>30.45</td><td>794</td></tr>
+            <tr><td>80-90</td><td>41.48</td><td>195</td></tr>
+            <tr><td>90-100</td><td>53.20</td><td>20</td></tr>
+        </tbody>
+    </table>
+    <p>Songs with popularity 0-10 have high error because many have popularity = 0 — the model can't distinguish "bad song" from "good song nobody has heard yet." Songs above 80 are outliers driven by viral/external factors the model can't see.</p>
+
+    <div class="plot-container">
+        <img src="error_by_popularity.png" alt="Error by Popularity Range">
+        <div class="plot-caption">Figure 7: Mean absolute error by popularity range — extremes are hardest</div>
+    </div>
+
+    <div class="plot-container">
+        <img src="predictions_by_range.png" alt="Predictions by Range">
+        <div class="plot-caption">Figure 8: Prediction accuracy broken down by popularity ranges</div>
+    </div>
+
+    <h3>5.4 What Would I Try Next?</h3>
+    <ol>
+        <li><strong>Target transformation</strong> — log or sqrt transform on popularity to handle skew</li>
+        <li><strong>Artist features</strong> — incorporating follower count or monthly listeners would likely boost accuracy significantly</li>
+        <li><strong>Hyperparameter optimization</strong> — RandomizedSearchCV or Bayesian optimization with Optuna</li>
+        <li><strong>Neural networks</strong> — MLP regressor for capturing more complex patterns</li>
+        <li><strong>Model stacking</strong> — combining predictions from multiple models</li>
+    </ol>
+
+    <!-- CONCLUSION -->
+    <h2>6. Conclusion</h2>
+    <p>This project was a solid exercise in the full ML workflow. The main takeaway was that predicting popularity from audio features alone has a hard ceiling because popularity is influenced by so many non-audio factors. That said, XGBoost with R² of 0.37 does a reasonable job and the feature analysis gave interesting insights — genre dominates everything, instrumentalness matters more than you'd think, and individual audio features play a secondary but measurable role.</p>
+    <p>I think the most interesting part was the error analysis — figuring out WHY certain songs are hard to predict was more insightful than just chasing a higher R² score. The model is decent at predicting "normal" songs in the 20-50 range but struggles with outliers on both ends, which is kind of expected.</p>
+
+    <div class="highlight-box">
+        <strong>Tech Stack:</strong> Python, pandas, numpy, scikit-learn, XGBoost, matplotlib, seaborn, Google Colab<br>
+        <strong>GitHub:</strong> <a href="https://github.com/srivris1/spotify-popularity-prediction">github.com/srivris1/spotify-popularity-prediction</a>
+    </div>
+
+    <div class="footer">
+        CodeNex AIML Club Recruitment — Task 2 | Rishit Srivastava | September 2026
+    </div>
+
+</body>
+</html>
