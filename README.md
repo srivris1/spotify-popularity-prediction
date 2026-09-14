@@ -1,44 +1,27 @@
-# Spotify Popularity Predictor
+# Spotify Song Popularity Predictor
 
-Hey! This is my project for the CodeNex AIML Task 2. 
-I grabbed the Spotify Tracks Dataset from Kaggle to see if I could predict how popular a song will be (on a scale from 0 to 100) just based on its audio features. 
+A machine learning project built for CodeNex AIML Task 2. This project uses regression models to predict a song's popularity (0-100) based strictly on its audio features and genre.
 
-## Project structure
+## Project Structure
+- `spotify_popularity_prediction.py` -> The core script covering data preprocessing, model training, and evaluation.
+- `Task_Report.txt` & `Task_Report.html` -> Final reports discussing methodology and results.
+- `*.png` -> Visualizations generated during analysis (heatmaps, feature importance, etc.).
+- `dataset.csv` -> Automatically fetched when running the script.
 
-- `spotify_popularity_prediction.py` -> the main python script where all the magic happens.
-- `Task_Report.txt` & `Task_Report.html` -> my final report discussing my findings.
-- `*.png` -> various charts and graphs generated during the analysis (like correlation heatmaps, feature importance, etc.).
-- `dataset.csv` -> the dataset (downloads automatically if you run the script).
+## Tech Stack
+- **Python** (Pandas, NumPy)
+- **Scikit-Learn** (Preprocessing, Baseline Models)
+- **XGBoost** (Primary Regression Model)
+- **Matplotlib & Seaborn** (Data Visualization)
+- **Kagglehub** (Automated dataset retrieval)
 
-## What I analyzed
+## What I Learned
+- **Feature Engineering:** Encoding highly cardinal features (like 114 unique genres) using Label Encoding avoids extreme sparsity while retaining predictive power for tree-based models.
+- **Model Selection:** Tree-based ensemble methods (Random Forest, XGBoost) significantly outperformed standard linear models (Ridge Regression) when mapping complex audio attributes to popularity.
+- **Data Insights:** High energy and specific genres strongly influence popularity, though subjective real-world metrics contain inherent noise.
 
-I basically wanted to see what makes a song popular. I looked into:
-- **Audio features:** Things like how danceable a song is, its energy level, loudness, acousticness, etc.
-- **Genres:** The dataset has around 114 different genres. I had to convert these into numbers so the model could understand them.
+## Difficulties Faced
+The main challenge was the **high dimensionality of categorical features**, specifically the 114 unique genres. One-hot encoding them would drastically increase feature space and risk overfitting. I handled this by using `LabelEncoder`. While linear models struggle with this, tree-based regressors (like my chosen XGBoost) handle ordinal-encoded categories efficiently without assuming strict ordinality.
 
-I checked how these features correlate with a song's popularity. Turns out, things like genre and energy matter a lot, but predicting popularity perfectly is really hard because it depends on a lot of outside factors (like marketing, artist fame, or TikTok trends) that aren't in the audio.
-
-## Techs used
-
-- **Python** (Pandas, NumPy for data manipulation)
-- **Scikit-learn** (for data preprocessing and building baseline models)
-- **Matplotlib & Seaborn** (for data visualization)
-- **XGBoost** (the most accurate model I tried!)
-- **Kagglehub** (to easily download the dataset directly in the script)
-
-## My Approach
-
-1. **Cleaning:** Dropped useless text columns like track ID and artist names. Cleaned up missing values and duplicates.
-2. **Encoding:** Used `LabelEncoder` to change categorical stuff like genres into numbers.
-3. **Training:** I tested 4 different models to see what works best:
-   - Ridge Regression (basic, didn't do so well)
-   - Random Forest
-   - Gradient Boosting
-   - XGBoost (the clear winner 🏆)
-4. **Results:** XGBoost gave the best results. It's not 100% accurate (because popularity is subjective and trend-driven), but it learned the patterns in the data way better than the others.
-
-## How to run
-
-Just run `spotify_popularity_prediction.py`. It uses `kagglehub` to fetch the dataset automatically, so you don't even have to download it yourself.
-
-Hope you like it!
+## How to Run
+Simply execute `spotify_popularity_prediction.py`. The required Spotify dataset is fetched automatically via Kagglehub.
