@@ -1,15 +1,5 @@
-# %% [markdown]
-# # 🎵 Spotify Song Popularity Prediction
-# **Author:** Rishit Srivastava  
-# **Task:** CodeNex AIML Club Recruitment — Task 2  
-# **Objective:** Build a regression model to predict song popularity using audio features from the Spotify Tracks Dataset.
-# 
-# ---
 
-# %% [markdown]
-# ## 1. Setup & Imports
 
-# %%
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -23,7 +13,6 @@ from sklearn.linear_model import Ridge
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
-# XGBoost - install if not available
 try:
     from xgboost import XGBRegressor
     HAS_XGB = True
@@ -35,21 +24,11 @@ except ImportError:
 
 print("All imports loaded successfully.")
 
-# %% [markdown]
-# ## 2. Load the Dataset
 
-# %%
-# Download from Kaggle
-# If running on Colab, upload the CSV or use kaggle API
-# For simplicity, we try reading from a direct path first
 
 import os
 
-# Option 1: If you uploaded the file to Colab
-# from google.colab import files
-# uploaded = files.upload()
 
-# Option 2: Direct download using kagglehub (Colab has this pre-installed usually)
 try:
     import kagglehub
     path = kagglehub.dataset_download("maharshipandya/-spotify-tracks-dataset")
@@ -57,7 +36,6 @@ try:
     df = pd.read_csv(csv_path)
     print(f"Loaded via kagglehub from: {csv_path}")
 except Exception:
-    # Fallback: try loading from current directory
     try:
         df = pd.read_csv("dataset.csv")
         print("Loaded from local file.")
@@ -68,10 +46,7 @@ except Exception:
 print(f"\nDataset shape: {df.shape}")
 df.head()
 
-# %% [markdown]
-# ## 3. Initial Exploration
 
-# %%
 print("=== Dataset Info ===")
 print(f"Rows: {df.shape[0]}, Columns: {df.shape[1]}")
 print(f"\nColumn types:\n{df.dtypes}")
@@ -79,12 +54,8 @@ print(f"\nMissing values:\n{df.isnull().sum()}")
 print(f"\nBasic statistics:")
 df.describe()
 
-# %%
-# Check the columns we have
 print("Columns:", df.columns.tolist())
 
-# %%
-# Distribution of the target variable - popularity
 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
 axes[0].hist(df['popularity'], bins=50, color='#1DB954', edgecolor='black', alpha=0.8)
@@ -104,26 +75,16 @@ plt.savefig('popularity_distribution.png', dpi=150, bbox_inches='tight')
 plt.show()
 print(f"\nPopularity stats: mean={df['popularity'].mean():.2f}, median={df['popularity'].median():.2f}, std={df['popularity'].std():.2f}")
 
-# %% [markdown]
-# ## 4. Preprocessing
 
-# %% [markdown]
-# ### 4.1 Handle Missing Values & Irrelevant Columns
 
-# %%
 print("=== Missing Values ===")
 missing = df.isnull().sum()
 print(missing[missing > 0])
 print(f"\nTotal missing values: {df.isnull().sum().sum()}")
 
-# Drop rows with missing values (if any)
 df_clean = df.dropna().copy()
 print(f"\nShape after dropping NaN: {df_clean.shape}")
 
-# %%
-# Drop irrelevant identifier columns
-# track_id, artists, album_name, track_name are identifiers/text, not useful as numeric features
-# We will NOT use popularity as an input feature (as per instructions)
 
 columns_to_drop = ['track_id', 'artists', 'album_name', 'track_name', 'Unnamed: 0']
 columns_to_drop = [c for c in columns_to_drop if c in df_clean.columns]
@@ -134,52 +95,36 @@ df_clean = df_clean.drop(columns=columns_to_drop)
 print(f"Remaining columns: {df_clean.columns.tolist()}")
 print(f"Shape: {df_clean.shape}")
 
-# %% [markdown]
-# ### 4.2 Handle Categorical Variables
 
-# %%
-# Check for categorical columns
 print("Data types:")
 print(df_clean.dtypes)
 print()
 
-# 'explicit' is boolean - convert to int
 if df_clean['explicit'].dtype == bool or df_clean['explicit'].dtype == object:
     df_clean['explicit'] = df_clean['explicit'].astype(int)
     print("Converted 'explicit' to integer (0/1)")
 
-# 'track_genre' is categorical - encode it
 print(f"\nUnique genres: {df_clean['track_genre'].nunique()}")
 print(f"Sample genres: {df_clean['track_genre'].unique()[:10]}")
 
-# Label encode the genre column
 le_genre = LabelEncoder()
 df_clean['track_genre_encoded'] = le_genre.fit_transform(df_clean['track_genre'])
 df_clean = df_clean.drop(columns=['track_genre'])
 
 print(f"\nGenre encoded. New shape: {df_clean.shape}")
 
-# %%
-# Final check on all columns
 print("Final columns and types:")
 print(df_clean.dtypes)
 print(f"\nAny remaining non-numeric: {df_clean.select_dtypes(exclude=[np.number]).columns.tolist()}")
 
-# %% [markdown]
-# ### 4.3 Handle Duplicates
 
-# %%
 dupes = df_clean.duplicated().sum()
 print(f"Duplicate rows: {dupes}")
 if dupes > 0:
     df_clean = df_clean.drop_duplicates()
     print(f"After removing duplicates: {df_clean.shape}")
 
-# %% [markdown]
-# ### 4.4 Correlation Analysis & Feature Selection
 
-# %%
-# Correlation heatmap
 plt.figure(figsize=(14, 10))
 corr_matrix = df_clean.corr()
 mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
@@ -190,13 +135,10 @@ plt.tight_layout()
 plt.savefig('correlation_heatmap.png', dpi=150, bbox_inches='tight')
 plt.show()
 
-# %%
-# Correlation with popularity specifically
 pop_corr = corr_matrix['popularity'].drop('popularity').sort_values(ascending=False)
 print("Correlation with Popularity:")
 print(pop_corr)
 
-# Visualize it
 fig, ax = plt.subplots(figsize=(10, 6))
 colors = ['#1DB954' if v > 0 else '#e74c3c' for v in pop_corr.values]
 pop_corr.plot(kind='barh', ax=ax, color=colors, edgecolor='black', alpha=0.8)
@@ -207,11 +149,7 @@ plt.tight_layout()
 plt.savefig('feature_correlation_popularity.png', dpi=150, bbox_inches='tight')
 plt.show()
 
-# %% [markdown]
-# ### 4.5 Feature Scaling
 
-# %%
-# Separate features and target
 X = df_clean.drop(columns=['popularity'])
 y = df_clean['popularity']
 
@@ -219,32 +157,18 @@ print(f"Features shape: {X.shape}")
 print(f"Target shape: {y.shape}")
 print(f"Feature columns: {X.columns.tolist()}")
 
-# %%
-# Train-test split (80/20)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 print(f"Training set: {X_train.shape}")
 print(f"Test set: {X_test.shape}")
 
-# %%
-# Scale the features using StandardScaler
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
 print("Feature scaling applied (StandardScaler - zero mean, unit variance)")
 
-# %% [markdown]
-# ## 5. Model Training
 
-# %% [markdown]
-# I'm going to compare 4 different regression models:
-# 1. **Ridge Regression** (linear baseline)
-# 2. **Random Forest Regressor** (ensemble, bagging)
-# 3. **Gradient Boosting Regressor** (ensemble, boosting)
-# 4. **XGBoost Regressor** (optimized boosting)
 
-# %%
-# Define models
 models = {
     'Ridge Regression': Ridge(alpha=1.0),
     'Random Forest': RandomForestRegressor(
@@ -273,8 +197,6 @@ models = {
     )
 }
 
-# %%
-# Train all models and store results
 results = {}
 
 for name, model in models.items():
@@ -282,7 +204,6 @@ for name, model in models.items():
     print(f"Training: {name}")
     print('='*50)
     
-    # Use scaled data for Ridge, unscaled for tree-based models
     if name == 'Ridge Regression':
         model.fit(X_train_scaled, y_train)
         y_pred = model.predict(X_test_scaled)
@@ -290,7 +211,6 @@ for name, model in models.items():
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
     
-    # Calculate metrics
     mse = mean_squared_error(y_test, y_pred)
     rmse = np.sqrt(mse)
     mae = mean_absolute_error(y_test, y_pred)
@@ -310,11 +230,7 @@ for name, model in models.items():
     print(f"  MAE:  {mae:.4f}")
     print(f"  R²:   {r2:.4f}")
 
-# %% [markdown]
-# ## 6. Evaluation & Comparison
 
-# %%
-# Summary comparison table
 comparison_df = pd.DataFrame({
     name: {
         'MSE': res['MSE'],
@@ -328,8 +244,6 @@ comparison_df = comparison_df.sort_values('R² Score', ascending=False)
 print("\n=== MODEL COMPARISON ===")
 print(comparison_df.to_string())
 
-# %%
-# Visual comparison of models
 fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
 metrics = ['RMSE', 'MAE', 'R² Score']
@@ -342,7 +256,6 @@ for i, metric in enumerate(metrics):
     axes[i].set_xticklabels(comparison_df.index, rotation=30, ha='right', fontsize=9)
     axes[i].set_ylabel(metric)
     
-    # Add value labels on bars
     for bar, val in zip(bars, comparison_df[metric]):
         axes[i].text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.01*bar.get_height(),
                      f'{val:.3f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
@@ -352,8 +265,6 @@ plt.tight_layout()
 plt.savefig('model_comparison.png', dpi=150, bbox_inches='tight')
 plt.show()
 
-# %%
-# Identify best model
 best_model_name = comparison_df['R² Score'].idxmax()
 best_model_results = results[best_model_name]
 print(f"\n🏆 Best Model: {best_model_name}")
@@ -361,16 +272,11 @@ print(f"   R² Score: {best_model_results['R2']:.4f}")
 print(f"   RMSE: {best_model_results['RMSE']:.4f}")
 print(f"   MAE: {best_model_results['MAE']:.4f}")
 
-# %% [markdown]
-# ## 7. Detailed Analysis of Best Model
 
-# %%
-# Actual vs Predicted scatter plot for best model
 y_pred_best = best_model_results['predictions']
 
 fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 
-# Scatter plot
 axes[0].scatter(y_test, y_pred_best, alpha=0.15, s=10, color='#1DB954', edgecolors='none')
 axes[0].plot([0, 100], [0, 100], 'r--', linewidth=2, label='Perfect Prediction')
 axes[0].set_xlabel('Actual Popularity', fontsize=12)
@@ -380,7 +286,6 @@ axes[0].legend(fontsize=11)
 axes[0].set_xlim(-5, 105)
 axes[0].set_ylim(-5, 105)
 
-# Residual distribution
 residuals = y_test - y_pred_best
 axes[1].hist(residuals, bins=60, color='#3498db', edgecolor='black', alpha=0.8, density=True)
 axes[1].axvline(x=0, color='red', linestyle='--', linewidth=2)
@@ -395,15 +300,10 @@ plt.tight_layout()
 plt.savefig('actual_vs_predicted.png', dpi=150, bbox_inches='tight')
 plt.show()
 
-# %% [markdown]
-# ### 7.1 Feature Importance
 
-# %%
-# Feature importance from tree-based models
 if best_model_name in ['Random Forest', 'Gradient Boosting', 'XGBoost']:
     importances = best_model_results['model'].feature_importances_
 else:
-    # Use Random Forest for feature importance anyway
     importances = results['Random Forest']['model'].feature_importances_
 
 feat_imp = pd.Series(importances, index=X.columns).sort_values(ascending=True)
@@ -420,11 +320,7 @@ print("\nTop 5 Most Important Features:")
 for i, (feat, imp) in enumerate(feat_imp.sort_values(ascending=False).head(5).items()):
     print(f"  {i+1}. {feat}: {imp:.4f}")
 
-# %% [markdown]
-# ### 7.2 Which Songs Are Hardest to Predict?
 
-# %%
-# Analyze prediction errors
 error_analysis = pd.DataFrame({
     'actual': y_test.values,
     'predicted': y_pred_best,
@@ -432,13 +328,10 @@ error_analysis = pd.DataFrame({
     'residual': y_test.values - y_pred_best
 })
 
-# Songs with largest errors
 print("=== Hardest to Predict (Largest Absolute Errors) ===")
 hardest = error_analysis.nlargest(10, 'abs_error')
 print(hardest.to_string(index=False))
 
-# %%
-# Error by popularity range
 error_analysis['pop_bin'] = pd.cut(error_analysis['actual'], 
                                     bins=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
                                     labels=['0-10', '10-20', '20-30', '30-40', '40-50', 
@@ -458,19 +351,13 @@ plt.tight_layout()
 plt.savefig('error_by_popularity.png', dpi=150, bbox_inches='tight')
 plt.show()
 
-# %% [markdown]
-# ### 7.3 How Close Are Predictions?
 
-# %%
-# Percentage of predictions within certain thresholds
 thresholds = [5, 10, 15, 20, 25]
 print("=== Prediction Accuracy within Thresholds ===")
 for t in thresholds:
     pct = (error_analysis['abs_error'] <= t).mean() * 100
     print(f"  Within ±{t} popularity points: {pct:.1f}%")
 
-# %%
-# Actual vs Predicted for different popularity ranges
 fig, axes = plt.subplots(2, 2, figsize=(14, 10))
 
 ranges = [(0, 25, 'Low (0-25)'), (25, 50, 'Medium-Low (25-50)'), 
@@ -491,11 +378,7 @@ plt.tight_layout()
 plt.savefig('predictions_by_range.png', dpi=150, bbox_inches='tight')
 plt.show()
 
-# %% [markdown]
-# ## 8. Cross-Validation (Best Model)
 
-# %%
-# 5-fold cross-validation on the best model
 if best_model_name == 'Ridge Regression':
     cv_scores = cross_val_score(best_model_results['model'], X_train_scaled, y_train, 
                                  cv=5, scoring='r2', n_jobs=-1)
@@ -507,10 +390,7 @@ print(f"=== 5-Fold Cross-Validation ({best_model_name}) ===")
 print(f"R² scores: {cv_scores}")
 print(f"Mean R²: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
 
-# %% [markdown]
-# ## 9. Summary & Conclusions
 
-# %%
 print("=" * 60)
 print("         SPOTIFY POPULARITY PREDICTION - SUMMARY")
 print("=" * 60)
@@ -546,8 +426,6 @@ print("  - Experiment with more hyperparameter tuning (GridSearch/Bayesian)")
 print("  - Apply target transformation (log) for skewed popularity distribution")
 print("=" * 60)
 
-# %%
-# Save all plots summary
 print("\nSaved plots:")
 print("  1. popularity_distribution.png")
 print("  2. correlation_heatmap.png")
